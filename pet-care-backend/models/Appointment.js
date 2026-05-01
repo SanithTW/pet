@@ -9,7 +9,8 @@ const appointmentSchema = new mongoose.Schema({
   time: { type: String, required: true },
   reason: { type: String, required: true },
   status: { type: String, enum: ['Pending', 'Confirmed', 'Approved', 'Completed', 'Cancelled', 'Rejected'], default: 'Pending' },
-  vetNotes: { type: String }
+  vetNotes: { type: String },
+  invoiceUrl: { type: String }
 }, { timestamps: true });
 
 const Appointment = mongoose.model('Appointment', appointmentSchema);

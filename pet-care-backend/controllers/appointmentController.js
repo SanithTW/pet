@@ -195,6 +195,32 @@ const rescheduleAppointment = async (req, res) => {
     res.status(400).json({ message: error.message });
   }
 };
+// @desc    Upload an invoice for a completed appointment
+// @route   PUT /api/appointments/:id/invoice
+// @access  Private/Admin
+const uploadInvoice = async (req, res) => {
+  try {
+    const appointmentId = req.params.id;
+    const appointment = await Appointment.findById(appointmentId);
+
+    if (!appointment) {
+      res.status(404);
+      throw new Error('Appointment not found');
+    }
+
+    if (req.file) {
+      // The frontend can fetch images from the /uploads directory
+      appointment.invoiceUrl = `/uploads/${req.file.filename}`;
+      const updatedAppointment = await appointment.save();
+      res.status(200).json(updatedAppointment);
+    } else {
+      res.status(400);
+      throw new Error('No image file provided');
+    }
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+};
 
 module.exports = {
   bookAppointment,
@@ -202,5 +228,6 @@ module.exports = {
   getAllAppointments,
   updateAppointmentStatus,
   cancelAppointment,
-  rescheduleAppointment
+  rescheduleAppointment,
+  uploadInvoice
 };

@@ -1,5 +1,5 @@
 import React, { useLayoutEffect, useState, useEffect, useContext } from 'react';
-import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity, Image, Alert, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity, Image, Alert, RefreshControl, Linking } from 'react-native';
 import { AuthContext } from '../../context/AuthContext';
 import api from '../../services/api';
 import { useFocusEffect } from '@react-navigation/native';
@@ -57,6 +57,17 @@ export default function AppointmentsScreen({ navigation }) {
     Alert.alert("Reschedule", "To reschedule, please cancel this appointment and book a new one.");
   };
 
+  const handleViewInvoice = (invoiceUrl) => {
+    // Assuming api.defaults.baseURL points to the backend (e.g. http://ip:5000/api)
+    // and uploads are served from the root (e.g. http://ip:5000/uploads/...)
+    const baseUrl = api.defaults.baseURL.replace('/api', '');
+    const fullUrl = `${baseUrl}${invoiceUrl}`;
+    Linking.openURL(fullUrl).catch(err => {
+      console.error("Failed to open URL", err);
+      Alert.alert("Error", "Could not open the invoice.");
+    });
+  };
+
   return (
     <View style={styles.mainContainer}>
       {/* Green Header exactly like HomeScreen */}
@@ -84,8 +95,8 @@ export default function AppointmentsScreen({ navigation }) {
           <View key={app._id} style={styles.upcomingCard}>
             <View style={styles.cardHeaderRow}>
               <Text style={styles.sectionTitle}>🏥 Visit Details</Text>
-              <View style={[styles.badge, app.status === 'Approved' ? styles.badgeApproved : app.status === 'Pending' ? styles.badgePending : app.status === 'Rejected' ? styles.badgeRejected : null]}>
-                <Text style={[styles.badgeText, app.status === 'Approved' ? styles.badgeTextApproved : app.status === 'Pending' ? styles.badgeTextPending : app.status === 'Rejected' ? styles.badgeTextRejected : null]}>{app.status}</Text>
+              <View style={[styles.badge, app.status === 'Approved' ? styles.badgeApproved : app.status === 'Completed' ? styles.badgeCompleted : app.status === 'Pending' ? styles.badgePending : app.status === 'Rejected' ? styles.badgeRejected : null]}>
+                <Text style={[styles.badgeText, app.status === 'Approved' ? styles.badgeTextApproved : app.status === 'Completed' ? styles.badgeTextCompleted : app.status === 'Pending' ? styles.badgeTextPending : app.status === 'Rejected' ? styles.badgeTextRejected : null]}>{app.status}</Text>
               </View>
             </View>
 
@@ -99,13 +110,21 @@ export default function AppointmentsScreen({ navigation }) {
             </View>
 
             {/* Action Buttons for the Specific Appointment */}
-            {app.status !== 'Cancelled' && app.status !== 'Rejected' && (
+            {app.status !== 'Cancelled' && app.status !== 'Rejected' && app.status !== 'Completed' && (
               <View style={styles.actionRow}>
                 <TouchableOpacity style={styles.actionReschedule} onPress={() => handleReschedule(app)}>
                   <Text style={styles.actionRescheduleText}>Reschedule</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.actionCancel} onPress={() => handleCancel(app._id)}>
                   <Text style={styles.actionCancelText}>Cancel</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {app.status === 'Completed' && app.invoiceUrl && (
+              <View style={styles.actionRow}>
+                <TouchableOpacity style={styles.actionInvoice} onPress={() => handleViewInvoice(app.invoiceUrl)}>
+                  <Text style={styles.actionInvoiceText}>📄 View Invoice</Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -201,6 +220,8 @@ const styles = StyleSheet.create({
   badgeTextPending: { color: '#FF9800' },
   badgeApproved: { backgroundColor: '#E8F5E9' },
   badgeTextApproved: { color: '#4CAF50' },
+  badgeCompleted: { backgroundColor: '#E3F2FD' },
+  badgeTextCompleted: { color: '#2196F3' },
   badgeRejected: { backgroundColor: '#FFEBEE' },
   badgeTextRejected: { color: '#F44336' },
 
@@ -244,4 +265,6 @@ const styles = StyleSheet.create({
   actionRescheduleText: { color: '#E65100', fontWeight: 'bold', fontSize: 13 },
   actionCancel: { backgroundColor: '#FFEBEE', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8 },
   actionCancelText: { color: '#C62828', fontWeight: 'bold', fontSize: 13 },
+  actionInvoice: { backgroundColor: '#E1F5FE', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8, flex: 1, alignItems: 'center' },
+  actionInvoiceText: { color: '#0277BD', fontWeight: 'bold', fontSize: 14 },
 });
