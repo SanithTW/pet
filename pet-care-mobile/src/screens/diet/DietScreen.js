@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { FontAwesome5, MaterialCommunityIcons } from '@expo/vector-icons';
 import { AuthContext } from '../../context/AuthContext';
-import api, { apiBaseUrl } from '../../services/api';
+import api, { getBackendOrigin } from '../../services/api';
 
 const MEAL_ICONS = {
   Morning: { icon: 'sun', type: FontAwesome5, color: '#FFA000' },
@@ -22,7 +22,7 @@ export default function DietScreen({ navigation }) {
   const [selectedPet, setSelectedPet] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  const baseFileUrl = apiBaseUrl.replace('/api', '');
+  const baseFileUrl = getBackendOrigin();
 
   useEffect(() => { fetchPets(); }, []);
   useEffect(() => { if (selectedPet) fetchRecords(selectedPet._id); }, [selectedPet]);

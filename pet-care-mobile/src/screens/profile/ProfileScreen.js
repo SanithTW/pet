@@ -30,7 +30,7 @@ export default function ProfileScreen({ navigation }) {
       <View style={styles.infoCardWrapper}>
         <View style={styles.infoCard}>
           <View style={styles.cardHeader}>
-            <Text style={styles.nameText}>{userName || 'User Name'}</Text>
+            <Text style={styles.nameText}>{userName || '—'}</Text>
             <TouchableOpacity style={styles.signOutButton} onPress={logout}>
               <Text style={styles.signOutIcon}>{'<-'}</Text>
               <Text style={styles.signOutText}>Sign out</Text>
@@ -39,7 +39,7 @@ export default function ProfileScreen({ navigation }) {
 
           <View style={styles.contactRow}>
             <Text style={styles.contactIcon}>✉</Text>
-            <Text style={styles.contactText}>{userEmail || 'email@example.com'}</Text>
+            <Text style={styles.contactText}>{userEmail || '—'}</Text>
           </View>
         </View>
       </View>

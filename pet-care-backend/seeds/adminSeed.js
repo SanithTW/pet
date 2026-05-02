@@ -2,8 +2,16 @@ const User = require('../models/User');
 
 const seedAdminUser = async () => {
   try {
-    const adminEmail = process.env.ADMIN_EMAIL || 'admin@petcare.com';
-    const adminPassword = process.env.ADMIN_PASSWORD || 'admin123';
+    const adminEmail = process.env.ADMIN_EMAIL?.trim();
+    const adminPassword = process.env.ADMIN_PASSWORD?.trim();
+
+    if (!adminEmail || !adminPassword) {
+      console.warn(
+        'Skipping admin seed: set ADMIN_EMAIL and ADMIN_PASSWORD in .env (see .env.example)'
+      );
+      return;
+    }
+
     const existingAdmin = await User.findOne({ email: adminEmail });
 
     if (existingAdmin) {

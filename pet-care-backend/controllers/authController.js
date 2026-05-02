@@ -39,12 +39,13 @@ const sendEmailOTP = async (email, otp, purpose = 'registration') => {
     };
 
     await transporter.sendMail(mailOptions);
-  } else {
-    // Development mode helper when email is not configured
+  } else if (process.env.NODE_ENV !== 'production') {
     console.log(`\n===========================================`);
     console.log(`[DEVELOPMENT] OTP for ${email} is: ${otp}`);
     console.log(`(Configure EMAIL_USER and EMAIL_PASS in .env to send real emails)`);
     console.log(`===========================================\n`);
+  } else {
+    throw new Error('Email transport is not configured');
   }
 };
 
@@ -63,6 +64,13 @@ const sendOTP = async (req, res) => {
     const userExists = await User.findOne({ email });
     const purpose = userExists ? 'login' : 'registration';
 
+    const mailConfigured = Boolean(process.env.EMAIL_USER?.trim() && process.env.EMAIL_PASS?.trim());
+    if (process.env.NODE_ENV === 'production' && !mailConfigured) {
+      return res.status(503).json({
+        message: 'OTP email is not configured on this server. Contact support.',
+      });
+    }
+
     // Generate 6 digit OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
@@ -79,8 +87,8 @@ const sendOTP = async (req, res) => {
     await sendEmailOTP(email, otp, purpose);
 
     const responsePayload = { message: `OTP sent successfully for ${purpose}` };
-    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-      responsePayload.otp = otp; // Return OTP in dev mode so the user can enter it without email delivery
+    if (!mailConfigured && process.env.NODE_ENV !== 'production') {
+      responsePayload.otp = otp;
     }
 
     res.status(200).json(responsePayload);
@@ -224,6 +232,12 @@ const loginUser = async (req, res) => {
 // @access  Public
 const googleLogin = async (req, res) => {
   try {
+    if (process.env.ALLOW_INSECURE_GOOGLE_AUTH !== 'true') {
+      return res.status(403).json({
+        message: 'Google sign-in is disabled. Use email and password or OTP.',
+      });
+    }
+
     const { email, name } = req.body;
 
     if (!email) {
@@ -231,12 +245,13 @@ const googleLogin = async (req, res) => {
       throw new Error('No email provided from Google');
     }
 
+    const displayName = (name && String(name).trim()) || String(email).split('@')[0] || 'User';
+
     let user = await User.findOne({ email });
 
     if (!user) {
-      // Create user if not exists
       user = await User.create({
-        name: name || 'Google User',
+        name: displayName,
         email,
         authProvider: 'google'
       });

@@ -1,5 +1,7 @@
 require('dotenv').config();
 
+const apiUrl = (process.env.EXPO_PUBLIC_API_BASE_URL || '').trim();
+
 module.exports = {
   expo: {
     name: "pet-care-mobile",
@@ -11,7 +13,7 @@ module.exports = {
       "web"
     ],
     extra: {
-      apiUrl: process.env.EXPO_PUBLIC_API_BASE_URL || "http://localhost:5000/api"
+      apiUrl: apiUrl || undefined,
     },
     orientation: "portrait",
     icon: "./assets/1.png",

@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { AuthContext } from '../../context/AuthContext';
 import api from '../../services/api';
-import { Feather, AntDesign } from '@expo/vector-icons';
+import { Feather } from '@expo/vector-icons';
 
 export default function LoginScreen({ navigation }) {
   const { login } = useContext(AuthContext);
@@ -32,20 +32,6 @@ export default function LoginScreen({ navigation }) {
       login(response.data.token, response.data.role, response.data.name, response.data.email);
     } catch (error) {
       const message = error.response?.data?.message || error.message || 'Login failed';
-      alert(message);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleGoogleAuth = async () => {
-    const dummyGoogleUser = { email: 'user@gmail.com', name: 'Google User' }; 
-    setIsLoading(true);
-    try {
-      const response = await api.post('/auth/google', dummyGoogleUser);
-      login(response.data.token, response.data.role, response.data.name, response.data.email);
-    } catch (error) {
-      const message = error.response?.data?.message || error.message || 'Google Auth failed';
       alert(message);
     } finally {
       setIsLoading(false);
@@ -220,20 +206,6 @@ const styles = StyleSheet.create({
     color: '#000000',
     fontSize: 16,
     fontWeight: '700',
-  },
-  orText: {
-    textAlign: 'center',
-    color: '#666',
-    fontSize: 16,
-    marginBottom: 20,
-  },
-  googleButton: {
-    backgroundColor: '#5EBFA4',
-    flexDirection: 'row',
-    height: 52,
-    borderRadius: 6,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   bottomBar: {
     position: 'absolute',

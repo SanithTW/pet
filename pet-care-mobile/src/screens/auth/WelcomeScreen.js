@@ -6,11 +6,9 @@ export default function WelcomeScreen({ navigation }) {
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
 
-        {/* You will need to save the dog logo to your assets folder! */}
-        {/* For now, we are using a placeholder standard image tag. */}
         <View style={styles.imageContainer}>
           <Image
-            source={require('../../../assets/1.png')} // Local doggy logo
+            source={require('../../../assets/1.png')}
             style={styles.logo}
             resizeMode="contain"
           />

@@ -1,4 +1,4 @@
-import React, { useContext, useState } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -11,12 +11,10 @@ import {
   Platform,
   ScrollView
 } from 'react-native';
-import { AuthContext } from '../../context/AuthContext';
 import api from '../../services/api';
-import { Feather, AntDesign } from '@expo/vector-icons';
+import { Feather } from '@expo/vector-icons';
 
 export default function RegisterScreen({ navigation }) {
-  const { login } = useContext(AuthContext);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -36,12 +34,6 @@ export default function RegisterScreen({ navigation }) {
       return;
     }
 
-    // Admin dummy logic check first
-    if (name.toLowerCase() === 'admin' && password === 'admin123') {
-      navigation.replace('AdminDashboard');
-      return;
-    }
-
     setIsLoading(true);
     try {
       const response = await api.post('/auth/send-otp', { email });
@@ -52,23 +44,6 @@ export default function RegisterScreen({ navigation }) {
       navigation.navigate('OtpVerification', { name, email, password });
     } catch (error) {
       const message = error.response?.data?.message || error.message || 'Failed to send OTP';
-      alert(message);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleGoogleAuth = async () => {
-    // This is a placeholder for actual Expo Google Auth Session
-    // Upon success, you'd get the email & name from Google and pass it here:
-    // const googleUserInfo = await googleSignIn();
-    const dummyGoogleUser = { email: 'user@gmail.com', name: 'Google User' }; 
-    setIsLoading(true);
-    try {
-      const response = await api.post('/auth/google', dummyGoogleUser);
-      login(response.data.token);
-    } catch (error) {
-      const message = error.response?.data?.message || error.message || 'Google Auth failed';
       alert(message);
     } finally {
       setIsLoading(false);
@@ -279,21 +254,6 @@ const styles = StyleSheet.create({
     color: '#000000',
     fontSize: 16,
     fontWeight: '600',
-  },
-  orText: {
-    textAlign: 'center',
-    color: '#666',
-    fontSize: 15,
-    marginBottom: 16,
-  },
-  googleButton: {
-    backgroundColor: '#5EBFA4',
-    flexDirection: 'row',
-    height: 48,
-    borderRadius: 6,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 10,
   },
   loginContainer: {
     flexDirection: 'row',

@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { AuthContext } from '../../context/AuthContext';
-import api, { apiBaseUrl } from '../../services/api';
+import api, { getBackendOrigin } from '../../services/api';
 
 export default function AdminVaccineManagementScreen({ navigation }) {
   const { userToken } = useContext(AuthContext);
@@ -23,7 +23,7 @@ export default function AdminVaccineManagementScreen({ navigation }) {
   const [documentUri, setDocumentUri] = useState(null);
 
   const authHeader = { headers: { Authorization: `Bearer ${userToken}` } };
-  const baseFileUrl = apiBaseUrl.replace('/api', '');
+  const baseFileUrl = getBackendOrigin();
 
   useEffect(() => { 
     fetchAllData();

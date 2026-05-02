@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useContext } from 'react';
 import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity, Image, TextInput, Alert, ActivityIndicator, Platform } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import api, { apiBaseUrl } from '../../services/api';
+import api from '../../services/api';
 import { AuthContext } from '../../context/AuthContext';
 
 const AddedPetCard = ({ pet, onDelete }) => (

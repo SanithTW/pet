@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { AuthContext } from '../../context/AuthContext';
-import api, { apiBaseUrl } from '../../services/api';
+import api, { getBackendOrigin } from '../../services/api';
 
 const emptyMed = () => ({ medicationName: '', dosage: '', frequency: '' });
 
@@ -31,7 +31,7 @@ export default function AdminMedicationManagementScreen({ navigation }) {
   const [prescriptionUri, setPrescriptionUri] = useState(null);
 
   const authHeader = { headers: { Authorization: `Bearer ${userToken}` } };
-  const baseFileUrl = apiBaseUrl.replace('/api', '');
+  const baseFileUrl = getBackendOrigin();
 
   useEffect(() => { fetchInitialData(); }, []);
 

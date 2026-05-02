@@ -13,14 +13,14 @@ A full-stack **pet care** application: an **Expo (React Native)** mobile client 
 
 ### Pet owners (`owner` role)
 
-- **Authentication**: email/password login, OTP-based registration and flows; optional Gmail OTP delivery (falls back to console + JSON `otp` in development when SMTP is unset).
+- **Authentication**: email/password login, OTP-based registration; SMTP optional in development (OTP also returned in JSON only when **not** in production). In production, `EMAIL_USER` / `EMAIL_PASS` must be set or OTP endpoints return an error.
 - **Home**: dashboard and pet list (`/pets`).
 - **Tabs**: Home, vet booking entry, profile.
 - **Modules** (via stack navigation): appointments, vaccinations, grooming, boarding, diet, medications, add pet.
 
 ### Administrators (`admin` role)
 
-- Seeded automatically on backend startup if no admin exists (see [Environment variables](#environment-variables)).
+- Created on backend startup **only when** `ADMIN_EMAIL` and `ADMIN_PASSWORD` are set and that admin does not yet exist ([Environment variables](#environment-variables)).
 - Dashboard and management for: vets and schedules, appointment approvals, vaccine records, grooming services and bookings, boarding rooms and bookings, diet and medication catalogs, booking approvals.
 
 ### API capabilities (high level)
@@ -51,18 +51,19 @@ For physical devices testing the app, the API must be reachable on your LAN or v
    npm install
    ```
 
-2. **Create `.env`** in `pet-care-backend/` (never commit secrets; `.env` is gitignored):
+2. **Create `.env`** in `pet-care-backend/` (`cp .env.example .env` then fill values; never commit secrets):
 
    | Variable | Required | Description |
    |----------|----------|-------------|
    | `MONGO_URI` | Yes | MongoDB connection string |
    | `JWT_SECRET` | Yes | Secret for signing JWTs |
    | `PORT` | No | Listening port (default **5000**) |
-   | `NODE_ENV` | No | Use `production` to hide stack traces in errors |
-   | `ADMIN_EMAIL` | No | Seed admin email (default `admin@petcare.com`) |
-   | `ADMIN_PASSWORD` | No | Seed admin password (default `admin123`) |
-   | `EMAIL_USER` | No | Gmail address for OTP mail |
-   | `EMAIL_PASS` | No | Gmail app password (or compatible SMTP credential) |
+   | `NODE_ENV` | No | Use `production` to hide stack traces and enforce OTP email |
+   | `ADMIN_EMAIL` | For first admin | With `ADMIN_PASSWORD`, seeds one admin account on startup if missing |
+   | `ADMIN_PASSWORD` | For first admin | Same as above |
+   | `EMAIL_USER` | Production OTP | Gmail address for OTP mail |
+   | `EMAIL_PASS` | Production OTP | Gmail app password or compatible SMTP secret |
+   | `ALLOW_INSECURE_GOOGLE_AUTH` | No | Must be **`true`** to allow legacy `POST /auth/google` (unverified payloads). Disabled by default |
 
 3. **Run**
 
@@ -71,11 +72,11 @@ For physical devices testing the app, the API must be reachable on your LAN or v
    npm start      # node server.js
    ```
 
-   On success you should see MongoDB connected, optional admin seed logs, and `Server running on port ...`.
+   On success you should see MongoDB connected; if both admin env vars are set, a one-time admin seed log; then `Server running on port ...`.
 
    Health check: open `http://localhost:PORT/` — response: `API is running...`.
 
-4. **Admin seed**: runs automatically inside `server.js` after DB connect (`seeds/adminSeed.js`). Override credentials with `ADMIN_EMAIL` / `ADMIN_PASSWORD`.
+4. **Admin seed**: runs after DB connect (`seeds/adminSeed.js`) **only when** both `ADMIN_EMAIL` and `ADMIN_PASSWORD` are set. If omitted, the server skips seeding and logs a short warning (no baked-in defaults).
 
 Optional script:
 
@@ -94,23 +95,19 @@ npm run seed-admin
    npm install
    ```
 
-2. **Point the app at your API**
+2. **Point the app at your API** (required)
 
-   `app.config.js` sets:
+   Copy `.env.example` to `.env` in `pet-care-mobile/` and set **`EXPO_PUBLIC_API_BASE_URL`**. There is no default URL committed in code; misconfiguration fails fast at startup.
 
-   ```text
-   extra.apiUrl = process.env.EXPO_PUBLIC_API_BASE_URL || "http://localhost:5000/api"
-   ```
+   `app.config.js` passes through `extra.apiUrl` from that variable. `src/services/api.js` uses `EXPO_PUBLIC_API_BASE_URL` (or `extra.apiUrl`) as Axios `baseURL` (paths are relative, e.g. `/auth/login`, `/pets`).
 
-   `src/services/api.js` uses `EXPO_PUBLIC_API_BASE_URL` or that `extra.apiUrl` as Axios `baseURL` (paths are relative, e.g. `/auth/login`, `/pets`).
+   Typical values:
 
-   Examples:
+   - **Web / same machine**: `http://127.0.0.1:5000/api`
+   - **Android emulator**: `http://10.0.2.2:5000/api`
+   - **Physical device**: your PC’s LAN IP, e.g. `http://192.168.x.x:5000/api`
 
-   - **Web / same machine**: `http://localhost:5000/api` often works as default.
-   - **Android emulator**: try `http://10.0.2.2:5000/api` instead of `localhost`.
-   - **Physical device**: use your computer’s LAN IP, e.g. `http://192.168.x.x:5000/api`; ensure firewall allows the port.
-
-   Set in `.env` next to `app.config.js` (Expo picks up `EXPO_PUBLIC_*`):
+   Example `.env`:
 
    ```env
    EXPO_PUBLIC_API_BASE_URL=http://YOUR_HOST:5000/api
@@ -151,7 +148,8 @@ See `pet-care-backend/server.js` for mounted routers and individual `routes/*.js
 - **MongoDB errors**: Confirm `MONGO_URI` is correct and the cluster allows your IP (Atlas network access).
 - **401 / JWT**: Ensure `JWT_SECRET` matches between issuing tokens and verifying; Authorization header format `Bearer <token>`.
 - **Mobile cannot reach API**: Wrong `EXPO_PUBLIC_API_BASE_URL`; use emulator host mapping or LAN IP; keep `/api` suffix consistent with backend mounts.
-- **OTP not emailed**: Without `EMAIL_USER` / `EMAIL_PASS`, OTP is logged to the server console and returned in the JSON body in development (`otp` field) — use that value in the OTP screen.
+- **`Missing API configuration` on app launch**: Define `EXPO_PUBLIC_API_BASE_URL` in `pet-care-mobile/.env` and restart Expo.
+- **OTP not emailed**: In development only, without SMTP, OTP is logged to the console and returned in JSON (`otp`). In **`NODE_ENV=production`**, SMTP must be configured or OTP sends fail at the API.
 
 ## Scripts summary
 

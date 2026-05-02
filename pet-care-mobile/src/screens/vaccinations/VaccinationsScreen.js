@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { AuthContext } from '../../context/AuthContext';
-import api, { apiBaseUrl } from '../../services/api';
+import api, { getBackendOrigin } from '../../services/api';
 
 export default function VaccinationsScreen({ navigation }) {
   const { userToken } = useContext(AuthContext);
@@ -16,7 +16,7 @@ export default function VaccinationsScreen({ navigation }) {
   const [selectedPet, setSelectedPet] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  const baseFileUrl = apiBaseUrl.replace('/api', '');
+  const baseFileUrl = getBackendOrigin();
 
   useEffect(() => { fetchPets(); }, []);
   useEffect(() => { if (selectedPet) fetchRecords(selectedPet._id); }, [selectedPet]);
