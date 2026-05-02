@@ -280,7 +280,7 @@ const styles = StyleSheet.create({
   },
   headerRow: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingHorizontal: 24, paddingTop: 50,
+    paddingHorizontal: 24, paddingTop: 35,
   },
   backBtn: { width: 40 },
   backArrow: { fontSize: 24, color: '#FFF', fontWeight: 'bold' },
