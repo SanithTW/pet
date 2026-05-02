@@ -242,7 +242,9 @@ const googleLogin = async (req, res) => {
       });
     }
 
-    res.status(user.isNew ? 201 : 200).json({
+    const isNewUser = user.createdAt.getTime() === user.updatedAt.getTime();
+
+    res.status(isNewUser ? 201 : 200).json({
       _id: user.id,
       name: user.name,
       email: user.email,

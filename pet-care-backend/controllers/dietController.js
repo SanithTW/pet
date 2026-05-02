@@ -12,9 +12,16 @@ const createFeedingRecord = async (req, res) => {
     if (!pet || pet.owner.toString() !== req.user._id.toString()) {
       res.status(401); throw new Error('Not authorized or pet not found');
     }
+    let parsedSchedule;
+    try {
+      parsedSchedule = typeof schedule === 'string' ? JSON.parse(schedule) : (schedule || []);
+    } catch (e) {
+      parsedSchedule = Array.isArray(schedule) ? schedule : [];
+    }
+
     const record = await FeedingRecord.create({
       owner: req.user._id, pet: petId, categoryName,
-      schedule: schedule || [], startDate: startDate || new Date(),
+      schedule: parsedSchedule, startDate: startDate || new Date(),
       specialNotes, vetInstructions, allergies, avoidFoods, portionSize, feedingFrequency, waterIntake
     });
     await record.populate('pet', 'name species');
@@ -101,7 +108,7 @@ const updateFeedingRecordAdmin = async (req, res) => {
     if (feedingFrequency !== undefined) record.feedingFrequency = feedingFrequency;
     if (waterIntake !== undefined) record.waterIntake = waterIntake;
 
-    if (req.file) { record.dietChartUrl = `/uploads/${req.file.filename}`; }
+    if (req.file) { record.dietChartUrl = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`; }
 
     await record.save();
     res.status(200).json(record);

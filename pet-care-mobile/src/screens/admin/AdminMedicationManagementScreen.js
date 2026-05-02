@@ -71,7 +71,7 @@ export default function AdminMedicationManagementScreen({ navigation }) {
     setEditDosage(record.dosage);
     setEditFrequency(record.frequency);
     setNotes(record.notes || '');
-    setPrescriptionUri(record.prescriptionFileUrl ? `${baseFileUrl}${record.prescriptionFileUrl}` : null);
+    setPrescriptionUri(record.prescriptionFileUrl ? (record.prescriptionFileUrl.startsWith('data:') ? record.prescriptionFileUrl : `${baseFileUrl}${record.prescriptionFileUrl}`) : null);
     setShowModal(true);
   };
 

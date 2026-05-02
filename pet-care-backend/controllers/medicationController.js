@@ -95,7 +95,7 @@ const updateRecordAdmin = async (req, res) => {
         if (medicationName) record.medicationName = medicationName;
 
         if (req.file) {
-            record.prescriptionFileUrl = `/uploads/${req.file.filename}`;
+            record.prescriptionFileUrl = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
         }
 
         await record.save();

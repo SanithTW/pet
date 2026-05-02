@@ -15,10 +15,10 @@ const createService = async (req, res) => {
     let beforeImage, afterImage;
     if (req.files) {
       if (req.files.beforeImage) {
-        beforeImage = `${req.protocol}://${req.get('host')}/uploads/${req.files.beforeImage[0].filename}`;
+        beforeImage = `data:${req.files.beforeImage[0].mimetype};base64,${req.files.beforeImage[0].buffer.toString('base64')}`;
       }
       if (req.files.afterImage) {
-        afterImage = `${req.protocol}://${req.get('host')}/uploads/${req.files.afterImage[0].filename}`;
+        afterImage = `data:${req.files.afterImage[0].mimetype};base64,${req.files.afterImage[0].buffer.toString('base64')}`;
       }
     }
 
@@ -60,10 +60,10 @@ const updateService = async (req, res) => {
 
     if (req.files) {
       if (req.files.beforeImage) {
-        service.beforeImage = `${req.protocol}://${req.get('host')}/uploads/${req.files.beforeImage[0].filename}`;
+        service.beforeImage = `data:${req.files.beforeImage[0].mimetype};base64,${req.files.beforeImage[0].buffer.toString('base64')}`;
       }
       if (req.files.afterImage) {
-        service.afterImage = `${req.protocol}://${req.get('host')}/uploads/${req.files.afterImage[0].filename}`;
+        service.afterImage = `data:${req.files.afterImage[0].mimetype};base64,${req.files.afterImage[0].buffer.toString('base64')}`;
       }
     }
 

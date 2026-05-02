@@ -93,7 +93,18 @@ export default function VaccinationsScreen({ navigation }) {
               </View>
               {r.notes ? <Text style={styles.notes}><FontAwesome5 name="sticky-note" size={12} color="#888" /> {r.notes}</Text> : null}
               {r.documentUrl ? (
-                <TouchableOpacity style={styles.viewDocBtn} onPress={() => Linking.openURL(`${baseFileUrl}${r.documentUrl}`)}>
+                <TouchableOpacity 
+                  style={styles.viewDocBtn} 
+                  onPress={() => {
+                    if (r.documentUrl.startsWith('data:')) {
+                      // For simplicity, we can show an alert or you can implement a modal viewer
+                      // For now, let's assume it's viewable via Linking or handled by the system
+                      Linking.openURL(r.documentUrl);
+                    } else {
+                      Linking.openURL(`${baseFileUrl}${r.documentUrl}`);
+                    }
+                  }}
+                >
                   <Text style={styles.viewDocText}><FontAwesome5 name="file-pdf" size={14} color="#4A90E2" /> View Certificate</Text>
                 </TouchableOpacity>
               ) : null}

@@ -10,15 +10,17 @@ const createPet = async (req, res) => {
     }
 
     const profileImage = req.file
-      ? `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`
+      ? `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`
       : undefined;
+
+    const normalizedGender = gender ? (gender.charAt(0).toUpperCase() + gender.slice(1).toLowerCase()) : undefined;
 
     const pet = await Pet.create({
       owner: req.user._id,
       name,
       species,
       breed,
-      gender,
+      gender: ['Male', 'Female'].includes(normalizedGender) ? normalizedGender : undefined,
       age: age ? Number(age) : undefined,
       weight: weight ? Number(weight) : undefined,
       profileImage,

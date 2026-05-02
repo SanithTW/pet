@@ -21,6 +21,7 @@ const addVaccineRecord = async (req, res) => {
       owner: req.user._id,
       vaccineName,
       dateAdministered,
+      status: dateAdministered ? 'Completed' : 'Scheduled',
       notes
     });
     await record.populate('pet', 'name species');
@@ -103,7 +104,7 @@ const updateVaccineRecord = async (req, res) => {
     if (vaccineName) record.vaccineName = vaccineName;
 
     if (req.file) {
-      record.documentUrl = `/uploads/${req.file.filename}`;
+      record.documentUrl = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
     }
 
     await record.save();

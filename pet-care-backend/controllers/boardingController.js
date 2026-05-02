@@ -12,7 +12,7 @@ const createRoom = async (req, res) => {
     }
     
     const image = req.file
-      ? `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`
+      ? `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`
       : undefined;
 
     const room = await BoardingRoom.create({ name, dailyRate, amenities, capacity, image });
@@ -47,7 +47,7 @@ const updateRoom = async (req, res) => {
     if (isActive !== undefined) room.isActive = isActive;
 
     if (req.file) {
-      room.image = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
+      room.image = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
     }
 
     await room.save();

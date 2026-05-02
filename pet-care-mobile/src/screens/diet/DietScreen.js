@@ -151,7 +151,16 @@ export default function DietScreen({ navigation }) {
 
               {/* Diet Chart Download */}
               {r.dietChartUrl ? (
-                <TouchableOpacity style={styles.viewDocBtn} onPress={() => Linking.openURL(`${baseFileUrl}${r.dietChartUrl}`)}>
+                <TouchableOpacity 
+                  style={styles.viewDocBtn} 
+                  onPress={() => {
+                    if (r.dietChartUrl.startsWith('data:')) {
+                      Linking.openURL(r.dietChartUrl);
+                    } else {
+                      Linking.openURL(`${baseFileUrl}${r.dietChartUrl}`);
+                    }
+                  }}
+                >
                   <Text style={styles.viewDocText}>📄 View Diet Chart</Text>
                 </TouchableOpacity>
               ) : null}

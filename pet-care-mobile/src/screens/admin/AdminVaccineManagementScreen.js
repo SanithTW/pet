@@ -66,7 +66,7 @@ export default function AdminVaccineManagementScreen({ navigation }) {
     setVaccineName(record.vaccineName);
     setRecordStatus(record.status);
     setNotes(record.notes || '');
-    setDocumentUri(record.documentUrl ? `${baseFileUrl}${record.documentUrl}` : null);
+    setDocumentUri(record.documentUrl ? (record.documentUrl.startsWith('data:') ? record.documentUrl : `${baseFileUrl}${record.documentUrl}`) : null);
     setShowRecordModal(true);
   };
 

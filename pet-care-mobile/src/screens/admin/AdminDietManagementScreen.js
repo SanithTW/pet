@@ -84,7 +84,7 @@ export default function AdminDietManagementScreen({ navigation }) {
     setMorningMeal(s.find(x => x.time === 'Morning')?.portion || '');
     setAfternoonMeal(s.find(x => x.time === 'Afternoon')?.portion || '');
     setEveningMeal(s.find(x => x.time === 'Evening')?.portion || '');
-    setDietChartUri(record.dietChartUrl ? `${baseFileUrl}${record.dietChartUrl}` : null);
+    setDietChartUri(record.dietChartUrl ? (record.dietChartUrl.startsWith('data:') ? record.dietChartUrl : `${baseFileUrl}${record.dietChartUrl}`) : null);
     setShowModal(true);
   };
 

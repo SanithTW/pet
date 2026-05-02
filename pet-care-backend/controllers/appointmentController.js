@@ -213,7 +213,7 @@ const uploadInvoice = async (req, res) => {
 
     if (req.file) {
       // The frontend can fetch images from the /uploads directory
-      appointment.invoiceUrl = `/uploads/${req.file.filename}`;
+      appointment.invoiceUrl = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
       const updatedAppointment = await appointment.save();
       res.status(200).json(updatedAppointment);
     } else {
@@ -237,7 +237,7 @@ const addVaccineRecord = async (req, res) => {
     const { vaccineName, dateAdministered, nextDueDate, notes, status } = req.body;
     let documentUrl = null;
     if (req.file) {
-      documentUrl = `/uploads/${req.file.filename}`;
+      documentUrl = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
     }
 
     const record = await PetVaccineRecord.create({
@@ -270,7 +270,7 @@ const addMedicationRecord = async (req, res) => {
     const { medicationName, dosage, frequency, startDate, endDate, notes } = req.body;
     let prescriptionFileUrl = null;
     if (req.file) {
-      prescriptionFileUrl = `/uploads/${req.file.filename}`;
+      prescriptionFileUrl = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
     }
 
     const record = await MedicationRecord.create({
@@ -305,14 +305,14 @@ const addDietRecord = async (req, res) => {
             allergies, avoidFoods, portionSize, feedingFrequency, waterIntake } = req.body;
     let parsedSchedule = [];
     try {
-      parsedSchedule = schedule ? JSON.parse(schedule) : [];
+      parsedSchedule = typeof schedule === 'string' ? JSON.parse(schedule) : (schedule || []);
     } catch (e) {
-      parsedSchedule = [];
+      parsedSchedule = Array.isArray(schedule) ? schedule : [];
     }
 
     let dietChartUrl = null;
     if (req.file) {
-      dietChartUrl = `/uploads/${req.file.filename}`;
+      dietChartUrl = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
     }
 
     const record = await FeedingRecord.create({
