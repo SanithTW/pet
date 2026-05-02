@@ -188,7 +188,7 @@ const styles = StyleSheet.create({
   },
   headerContent: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingHorizontal: 24, paddingTop: 50,
+    paddingHorizontal: 24, paddingTop: 35,
   },
   greeting: { fontSize: 20, fontWeight: 'bold', color: '#FFF' },
   backButton: { width: 40 },

@@ -1,5 +1,6 @@
 import React, { useLayoutEffect, useState, useEffect, useContext } from 'react';
 import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity, Image, Alert, RefreshControl, Linking } from 'react-native';
+import { FontAwesome5 } from '@expo/vector-icons';
 import { AuthContext } from '../../context/AuthContext';
 import api from '../../services/api';
 import { useFocusEffect } from '@react-navigation/native';
@@ -94,7 +95,7 @@ export default function AppointmentsScreen({ navigation }) {
         {appointments.map(app => (
           <View key={app._id} style={styles.upcomingCard}>
             <View style={styles.cardHeaderRow}>
-              <Text style={styles.sectionTitle}>🏥 Visit Details</Text>
+              <Text style={styles.sectionTitle}><FontAwesome5 name="hospital" size={16} color="#5EBFA4" /> Visit Details</Text>
               <View style={[styles.badge, app.status === 'Approved' ? styles.badgeApproved : app.status === 'Completed' ? styles.badgeCompleted : app.status === 'Pending' ? styles.badgePending : app.status === 'Rejected' ? styles.badgeRejected : null]}>
                 <Text style={[styles.badgeText, app.status === 'Approved' ? styles.badgeTextApproved : app.status === 'Completed' ? styles.badgeTextCompleted : app.status === 'Pending' ? styles.badgeTextPending : app.status === 'Rejected' ? styles.badgeTextRejected : null]}>{app.status}</Text>
               </View>
@@ -105,7 +106,7 @@ export default function AppointmentsScreen({ navigation }) {
               <View style={styles.vetInfo}>
                 <Text style={styles.vetName}>{app.vet?.name || 'Vet'}</Text>
                 <Text style={styles.vetSub}>{app.reason}</Text>
-                <Text style={styles.vetDate}>📅 {new Date(app.date).toLocaleDateString()} at {app.time}</Text>
+                <Text style={styles.vetDate}><FontAwesome5 name="calendar-alt" size={12} color="#888" /> {new Date(app.date).toLocaleDateString()} at {app.time}</Text>
               </View>
             </View>
 
@@ -161,7 +162,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 24,
-    paddingTop: 50, // For notch and status bar
+    paddingTop: 35, // For notch and status bar
   },
   greeting: { fontSize: 20, fontWeight: 'bold', color: '#FFF' },
   backButton: {

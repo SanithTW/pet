@@ -154,7 +154,7 @@ const styles = StyleSheet.create({
   },
   headerContent: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingHorizontal: 24, paddingTop: 50,
+    paddingHorizontal: 24, paddingTop: 35,
   },
   backButton: { width: 40 },
   backArrow: { fontSize: 24, color: '#FFF', fontWeight: 'bold' },
