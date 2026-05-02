@@ -1,355 +1,205 @@
 import React, { useState, useEffect, useContext } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity,
-  Alert, Modal, ActivityIndicator, TextInput
+  View, Text, StyleSheet, ScrollView, SafeAreaView,
+  TouchableOpacity, ActivityIndicator, Linking
 } from 'react-native';
+import { FontAwesome5, MaterialCommunityIcons } from '@expo/vector-icons';
 import { AuthContext } from '../../context/AuthContext';
-import api from '../../services/api';
+import api, { apiBaseUrl } from '../../services/api';
 
-const CATEGORY_ICONS = ['🥩', '🐾', '🥗', '🦴', '🐟', '🥚', '🌾', '🥕'];
+const MEAL_ICONS = {
+  Morning: { icon: 'sun', type: FontAwesome5, color: '#FFA000' },
+  Afternoon: { icon: 'cloud-sun', type: FontAwesome5, color: '#FFB300' },
+  Evening: { icon: 'moon', type: FontAwesome5, color: '#3949AB' }
+};
 
 export default function DietScreen({ navigation }) {
   const { userToken } = useContext(AuthContext);
   const authHeader = { headers: { Authorization: `Bearer ${userToken}` } };
 
-  const [tab, setTab] = useState('categories');
-  const [categories, setCategories] = useState([]);
   const [pets, setPets] = useState([]);
   const [records, setRecords] = useState([]);
-  const [loading, setLoading] = useState(false);
   const [selectedPet, setSelectedPet] = useState(null);
+  const [loading, setLoading] = useState(false);
 
-  // New Plan Modal
-  const [showPlanModal, setShowPlanModal] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState(null);
-  const [feedingEntries, setFeedingEntries] = useState([{ time: '', portion: '', notes: '' }]);
+  const baseFileUrl = apiBaseUrl.replace('/api', '');
 
-  useEffect(() => {
-    fetchCategories();
-    fetchPets();
-  }, []);
-
-  useEffect(() => {
-    if (selectedPet) fetchRecords(selectedPet._id);
-  }, [selectedPet]);
-
-  const fetchCategories = async () => {
-    try { const { data } = await api.get('/diet/categories', authHeader); setCategories(data); }
-    catch (e) { console.error('fetchCategories', e); }
-  };
+  useEffect(() => { fetchPets(); }, []);
+  useEffect(() => { if (selectedPet) fetchRecords(selectedPet._id); }, [selectedPet]);
 
   const fetchPets = async () => {
     try {
       const { data } = await api.get('/pets', authHeader);
       setPets(data);
       if (data.length > 0) setSelectedPet(data[0]);
-    } catch (e) { console.error('fetchPets', e); }
+    } catch (e) { console.error(e); }
   };
 
   const fetchRecords = async (petId) => {
     setLoading(true);
-    try { const { data } = await api.get(`/diet/records?petId=${petId}`, authHeader); setRecords(data); }
-    catch (e) { console.error('fetchRecords', e); }
+    try {
+      const { data } = await api.get(`/diet/records?petId=${petId}`, authHeader);
+      setRecords(data);
+    } catch (e) { console.error(e); }
     finally { setLoading(false); }
   };
 
-  const openPlanModal = (cat) => {
-    setSelectedCategory(cat);
-    setFeedingEntries([{ time: '', portion: '', notes: '' }]);
-    setShowPlanModal(true);
-  };
-
-  const addEntry = () => setFeedingEntries([...feedingEntries, { time: '', portion: '', notes: '' }]);
-  const removeEntry = (i) => setFeedingEntries(feedingEntries.filter((_, idx) => idx !== i));
-  const updateEntry = (i, field, val) => {
-    const copy = [...feedingEntries];
-    copy[i] = { ...copy[i], [field]: val };
-    setFeedingEntries(copy);
-  };
-
-  const handleSavePlan = async () => {
-    if (!selectedPet) { Alert.alert('Error', 'Select a pet first'); return; }
-    const validEntries = feedingEntries.filter(e => e.time.trim() && e.portion.trim());
-    if (validEntries.length === 0) {
-      Alert.alert('Error', 'Add at least one feeding entry with time and portion');
-      return;
-    }
-    try {
-      await api.post('/diet/records', {
-        petId: selectedPet._id,
-        categoryId: selectedCategory._id,
-        schedule: validEntries
-      }, authHeader);
-      Alert.alert('Saved! 🥗', `Feeding plan for ${selectedPet.name} added`);
-      setShowPlanModal(false);
-      fetchRecords(selectedPet._id);
-      setTab('plans');
-    } catch (e) { Alert.alert('Error', e.response?.data?.message || 'Could not save'); }
-  };
-
-  const handleDeleteRecord = (id) => {
-    Alert.alert('Delete Plan', 'Remove this feeding plan?', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: async () => {
-        try { await api.delete(`/diet/records/${id}`, authHeader); fetchRecords(selectedPet._id); }
-        catch (e) { Alert.alert('Error', 'Could not delete'); }
-      }}
-    ]);
-  };
+  const formatDate = (d) => d ? new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
 
   return (
     <View style={styles.container}>
-      {/* Header */}
       <View style={styles.header}>
         <SafeAreaView>
           <View style={styles.headerRow}>
-            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+            <TouchableOpacity onPress={() => navigation.goBack()}>
               <Text style={styles.backArrow}>{'<'}</Text>
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>Diet & Feeding</Text>
+            <Text style={styles.headerTitle}>Diet & Nutrition</Text>
             <View style={{ width: 40 }} />
           </View>
         </SafeAreaView>
       </View>
 
-      {/* Tabs */}
-      <View style={styles.tabs}>
-        <TouchableOpacity style={[styles.tab, tab === 'categories' && styles.tabActive]} onPress={() => setTab('categories')}>
-          <Text style={[styles.tabText, tab === 'categories' && styles.tabTextActive]}>Diet Plans</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={[styles.tab, tab === 'plans' && styles.tabActive]} onPress={() => setTab('plans')}>
-          <Text style={[styles.tabText, tab === 'plans' && styles.tabTextActive]}>My Schedules</Text>
-        </TouchableOpacity>
-      </View>
+      {/* Pet Selector */}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.petBar} contentContainerStyle={styles.petBarContent}>
+        {pets.map(p => (
+          <TouchableOpacity
+            key={p._id}
+            style={[styles.petChip, selectedPet?._id === p._id && styles.petChipActive]}
+            onPress={() => setSelectedPet(p)}
+          >
+            <Text style={[styles.petChipText, selectedPet?._id === p._id && styles.petChipTextActive]}><FontAwesome5 name="paw" size={12} color={selectedPet?._id === p._id ? "#FFF" : "#888"} /> {p.name}</Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
 
-      {/* Pet selector */}
-      {pets.length > 0 && (
-        <View style={styles.petBarWrap}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.petBar}>
-            {pets.map(p => (
-              <TouchableOpacity
-                key={p._id}
-                style={[styles.petChip, selectedPet?._id === p._id && styles.petChipActive]}
-                onPress={() => setSelectedPet(p)}
-              >
-                <Text style={[styles.petChipText, selectedPet?._id === p._id && styles.petChipTextActive]}>🐾 {p.name}</Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
-      )}
-
-      {/* Diet Plan Categories Tab */}
-      {tab === 'categories' && (
-        <ScrollView contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
-          {categories.length === 0 && (
+      {loading ? (
+        <ActivityIndicator size="large" color="#5EBFA4" style={{ marginTop: 40 }} />
+      ) : (
+        <ScrollView contentContainerStyle={styles.list}>
+          {records.length === 0 && (
             <View style={styles.emptyCard}>
-              <Text style={styles.emptyIcon}>🥗</Text>
-              <Text style={styles.emptyText}>No diet plans available yet.</Text>
+              <Text style={styles.emptyTitle}>No diet plans yet</Text>
+              <Text style={styles.emptySub}>Your vet will create a diet plan after your appointment.</Text>
             </View>
           )}
-          {categories.map((c, i) => (
-            <View key={c._id} style={styles.catCard}>
-              <View style={styles.catTop}>
-                <View style={styles.catIcon}>
-                  <Text style={{ fontSize: 26 }}>{CATEGORY_ICONS[i % CATEGORY_ICONS.length]}</Text>
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.catName}>{c.name}</Text>
-                  {c.suitableFor ? (
-                    <View style={styles.suitablePill}>
-                      <Text style={styles.suitableText}>🐾 {c.suitableFor}</Text>
-                    </View>
-                  ) : null}
-                </View>
-              </View>
-              <Text style={styles.catDesc}>{c.nutritionalBenefits}</Text>
-              <TouchableOpacity
-                style={[styles.selectBtn, !selectedPet && { opacity: 0.5 }]}
-                onPress={() => openPlanModal(c)}
-                disabled={!selectedPet}
-              >
-                <Text style={styles.selectBtnText}>
-                  {selectedPet ? `Create plan for ${selectedPet.name}` : 'Select a pet above'}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          ))}
-        </ScrollView>
-      )}
 
-      {/* My Schedules Tab */}
-      {tab === 'plans' && (
-        <ScrollView contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
-          {loading && <ActivityIndicator size="large" color="#5EBFA4" style={{ marginTop: 20 }} />}
-          {!loading && records.length === 0 && (
-            <View style={styles.emptyCard}>
-              <Text style={styles.emptyIcon}>📋</Text>
-              <Text style={styles.emptyText}>No feeding schedules for {selectedPet?.name || 'this pet'}.</Text>
-              <Text style={styles.emptySub}>Go to "Diet Plans" to create one.</Text>
-            </View>
-          )}
           {records.map((r, ri) => (
-            <View key={r._id} style={styles.recordCard}>
-              <View style={styles.recordTop}>
-                <View style={styles.recordIcon}>
-                  <Text style={{ fontSize: 22 }}>{CATEGORY_ICONS[ri % CATEGORY_ICONS.length]}</Text>
+            <View key={r._id} style={styles.card}>
+              {/* Card Header */}
+              <View style={styles.cardTop}>
+                <View style={styles.iconBox}><View style={styles.dietCircle} /></View>
+                <View style={{ flex: 1, marginLeft: 12 }}>
+                  <Text style={styles.cardTitle}>{r.categoryName}</Text>
+                  <Text style={styles.cardSub}><FontAwesome5 name="calendar-alt" size={12} color="#888" /> Started: {formatDate(r.startDate)}</Text>
                 </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.recordCatName}>{r.category?.name}</Text>
-                  <Text style={styles.recordPet}>🐾 {r.pet?.name} · {r.pet?.species}</Text>
-                  <Text style={styles.recordDate}>📅 Since {new Date(r.startDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</Text>
+                <View style={[styles.badge, r.isActive ? styles.badgeActive : styles.badgeInactive]}>
+                  <Text style={styles.badgeText}>{r.isActive ? 'Active' : 'Inactive'}</Text>
                 </View>
-                <TouchableOpacity onPress={() => handleDeleteRecord(r._id)} style={styles.deleteBtn}>
-                  <Text style={styles.deleteBtnText}>✕</Text>
-                </TouchableOpacity>
               </View>
 
-              <Text style={styles.scheduleHeader}>Daily Feeding Schedule</Text>
-              {r.schedule.map((entry, ei) => (
-                <View key={ei} style={styles.entryRow}>
-                  <View style={styles.entryTime}>
-                    <Text style={styles.entryTimeText}>⏰ {entry.time}</Text>
+              {/* Meal Schedule */}
+              {r.schedule && r.schedule.length > 0 && (
+                <View style={styles.section}>
+                  <Text style={styles.sectionTitle}>Meal Schedule</Text>
+                  <View style={styles.mealsRow}>
+                    {r.schedule.map((entry, i) => (
+                      <View key={i} style={styles.mealBox}>
+                        <Text style={styles.mealIcon}>{MEAL_ICONS[entry.time] || 'Meal'}</Text>
+                        <Text style={styles.mealTime}>{entry.time}</Text>
+                        <Text style={styles.mealPortion}>{entry.portion}</Text>
+                      </View>
+                    ))}
                   </View>
-                  <View style={styles.entryPortion}>
-                    <Text style={styles.entryPortionText}>🥣 {entry.portion}</Text>
-                  </View>
-                  {entry.notes ? <Text style={styles.entryNotes}>{entry.notes}</Text> : null}
                 </View>
-              ))}
+              )}
+
+              {/* Feeding Details */}
+              {(r.portionSize || r.feedingFrequency || r.waterIntake) && (
+                <View style={styles.section}>
+                  <Text style={styles.sectionTitle}>Feeding Details</Text>
+                  {r.portionSize ? <Text style={styles.detailRow}>Portion: <Text style={styles.detailVal}>{r.portionSize}</Text></Text> : null}
+                  {r.feedingFrequency ? <Text style={styles.detailRow}>Frequency: <Text style={styles.detailVal}>{r.feedingFrequency}</Text></Text> : null}
+                  {r.waterIntake ? <Text style={styles.detailRow}>Water: <Text style={styles.detailVal}>{r.waterIntake}</Text></Text> : null}
+                </View>
+              )}
+
+              {/* Restrictions */}
+              {(r.allergies || r.avoidFoods) && (
+                <View style={styles.section}>
+                  <Text style={styles.sectionTitle}>Dietary Restrictions</Text>
+                  {r.allergies ? <Text style={styles.detailRow}>Allergies: <Text style={[styles.detailVal, { color: '#D32F2F' }]}>{r.allergies}</Text></Text> : null}
+                  {r.avoidFoods ? <Text style={styles.detailRow}>Avoid: <Text style={styles.detailVal}>{r.avoidFoods}</Text></Text> : null}
+                </View>
+              )}
+
+              {/* Vet Instructions */}
+              {r.vetInstructions ? (
+                <View style={styles.section}>
+                  <Text style={styles.sectionTitle}>Vet Instructions</Text>
+                  <Text style={styles.noteText}>{r.vetInstructions}</Text>
+                </View>
+              ) : null}
+
+              {/* Special Notes */}
+              {r.specialNotes ? (
+                <View style={styles.section}>
+                  <Text style={styles.sectionTitle}>Special Notes</Text>
+                  <Text style={styles.noteText}>{r.specialNotes}</Text>
+                </View>
+              ) : null}
+
+              {/* Diet Chart Download */}
+              {r.dietChartUrl ? (
+                <TouchableOpacity style={styles.viewDocBtn} onPress={() => Linking.openURL(`${baseFileUrl}${r.dietChartUrl}`)}>
+                  <Text style={styles.viewDocText}>📄 View Diet Chart</Text>
+                </TouchableOpacity>
+              ) : null}
             </View>
           ))}
         </ScrollView>
       )}
-
-      {/* Create Plan Modal */}
-      <Modal visible={showPlanModal} animationType="slide" transparent>
-        <View style={styles.overlay}>
-          <View style={styles.modalBox}>
-            <Text style={styles.modalTitle}>Create Feeding Plan</Text>
-            {selectedCategory && (
-              <View style={styles.confirmCat}>
-                <Text style={styles.confirmCatName}>🥗 {selectedCategory.name}</Text>
-                <Text style={styles.confirmCatSub}>for {selectedPet?.name}</Text>
-              </View>
-            )}
-
-            <Text style={styles.sectionLabel}>Feeding Schedule</Text>
-            <ScrollView style={{ maxHeight: 280 }} nestedScrollEnabled>
-              {feedingEntries.map((entry, i) => (
-                <View key={i} style={styles.entryFormRow}>
-                  <View style={styles.entryFormInputs}>
-                    <TextInput
-                      style={[styles.entryInput, { flex: 1, marginRight: 8 }]}
-                      placeholder="Time (e.g. 8:00 AM)"
-                      value={entry.time}
-                      onChangeText={v => updateEntry(i, 'time', v)}
-                    />
-                    <TextInput
-                      style={[styles.entryInput, { flex: 1 }]}
-                      placeholder="Portion (e.g. 2 cups)"
-                      value={entry.portion}
-                      onChangeText={v => updateEntry(i, 'portion', v)}
-                    />
-                  </View>
-                  <TextInput
-                    style={styles.notesEntryInput}
-                    placeholder="Notes (optional)"
-                    value={entry.notes}
-                    onChangeText={v => updateEntry(i, 'notes', v)}
-                  />
-                  {feedingEntries.length > 1 && (
-                    <TouchableOpacity onPress={() => removeEntry(i)} style={styles.removeEntryBtn}>
-                      <Text style={styles.removeEntryText}>Remove</Text>
-                    </TouchableOpacity>
-                  )}
-                </View>
-              ))}
-              <TouchableOpacity style={styles.addEntryBtn} onPress={addEntry}>
-                <Text style={styles.addEntryText}>+ Add Feeding Time</Text>
-              </TouchableOpacity>
-            </ScrollView>
-
-            <View style={styles.modalActions}>
-              <TouchableOpacity style={styles.mCancelBtn} onPress={() => setShowPlanModal(false)}>
-                <Text style={styles.mCancelText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.mSaveBtn} onPress={handleSavePlan}>
-                <Text style={styles.mSaveText}>Save Plan</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F4F6F8' },
-  header: { backgroundColor: '#5EBFA4', height: 120, borderBottomLeftRadius: 30, borderBottomRightRadius: 30 },
-  headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 24, paddingTop: 50 },
-  backBtn: { width: 40 },
+  header: { backgroundColor: '#5EBFA4', height: 115, borderBottomLeftRadius: 28, borderBottomRightRadius: 28 },
+  headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: 35 },
   backArrow: { fontSize: 24, color: '#FFF', fontWeight: 'bold' },
   headerTitle: { fontSize: 20, fontWeight: 'bold', color: '#FFF' },
-  tabs: { flexDirection: 'row', backgroundColor: '#FFF', borderBottomWidth: 1, borderBottomColor: '#EEE' },
-  tab: { flex: 1, paddingVertical: 14, alignItems: 'center' },
-  tabActive: { borderBottomWidth: 2, borderBottomColor: '#5EBFA4' },
-  tabText: { fontSize: 14, color: '#999', fontWeight: '600' },
-  tabTextActive: { color: '#5EBFA4', fontWeight: 'bold' },
-  petBarWrap: { backgroundColor: '#FFF', paddingVertical: 10, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: '#F0F0F0' },
-  petBar: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  petBar: { backgroundColor: '#FFF', borderBottomWidth: 1, borderBottomColor: '#EEE', maxHeight: 60 },
+  petBarContent: { paddingHorizontal: 16, paddingVertical: 12, gap: 8, flexDirection: 'row' },
   petChip: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, backgroundColor: '#F0F0F0', borderWidth: 1, borderColor: '#DDD' },
   petChipActive: { backgroundColor: '#5EBFA4', borderColor: '#5EBFA4' },
-  petChipText: { fontSize: 13, color: '#555', fontWeight: 'bold' },
+  petChipText: { fontSize: 13, fontWeight: 'bold', color: '#555' },
   petChipTextActive: { color: '#FFF' },
   list: { padding: 20, paddingBottom: 60 },
-  emptyCard: { backgroundColor: '#FFF', borderRadius: 16, padding: 30, alignItems: 'center', marginTop: 20, elevation: 3 },
+  emptyCard: { backgroundColor: '#FFF', borderRadius: 16, padding: 30, alignItems: 'center', marginTop: 20, elevation: 2 },
   emptyIcon: { fontSize: 48, marginBottom: 10 },
-  emptyText: { fontSize: 15, fontWeight: 'bold', color: '#333', textAlign: 'center', marginBottom: 4 },
-  emptySub: { fontSize: 13, color: '#888', textAlign: 'center' },
-  catCard: { backgroundColor: '#FFF', borderRadius: 16, padding: 18, marginBottom: 16, elevation: 3 },
-  catTop: { flexDirection: 'row', marginBottom: 10 },
-  catIcon: { width: 50, height: 50, borderRadius: 12, backgroundColor: '#FFF9E6', justifyContent: 'center', alignItems: 'center', marginRight: 12 },
-  catName: { fontSize: 16, fontWeight: 'bold', color: '#222', marginBottom: 6 },
-  suitablePill: { backgroundColor: '#E8F5E9', paddingHorizontal: 10, paddingVertical: 3, borderRadius: 20, alignSelf: 'flex-start', marginBottom: 2 },
-  suitableText: { color: '#2E7D32', fontSize: 12, fontWeight: 'bold' },
-  catDesc: { fontSize: 13, color: '#666', lineHeight: 20, marginBottom: 14 },
-  selectBtn: { backgroundColor: '#5EBFA4', borderRadius: 10, paddingVertical: 12, alignItems: 'center' },
-  selectBtnText: { color: '#FFF', fontWeight: 'bold', fontSize: 14 },
-  recordCard: { backgroundColor: '#FFF', borderRadius: 16, padding: 16, marginBottom: 16, elevation: 3 },
-  recordTop: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 12 },
-  recordIcon: { width: 44, height: 44, borderRadius: 12, backgroundColor: '#FFF9E6', justifyContent: 'center', alignItems: 'center', marginRight: 12 },
-  recordCatName: { fontSize: 15, fontWeight: 'bold', color: '#222', marginBottom: 2 },
-  recordPet: { fontSize: 12, color: '#666', marginBottom: 2 },
-  recordDate: { fontSize: 11, color: '#888' },
-  deleteBtn: { width: 28, height: 28, borderRadius: 14, backgroundColor: '#FFEBEE', justifyContent: 'center', alignItems: 'center' },
-  deleteBtnText: { color: '#C62828', fontWeight: 'bold', fontSize: 14 },
-  scheduleHeader: { fontSize: 13, fontWeight: 'bold', color: '#555', marginBottom: 8 },
-  entryRow: { backgroundColor: '#F9F9F9', borderRadius: 10, padding: 10, marginBottom: 6 },
-  entryTime: { marginBottom: 4 },
-  entryTimeText: { fontSize: 13, fontWeight: 'bold', color: '#333' },
-  entryPortion: {},
-  entryPortionText: { fontSize: 13, color: '#555' },
-  entryNotes: { fontSize: 11, color: '#888', fontStyle: 'italic', marginTop: 2 },
-  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-  modalBox: { backgroundColor: '#FFF', borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 24, maxHeight: '90%' },
-  modalTitle: { fontSize: 20, fontWeight: 'bold', color: '#333', textAlign: 'center', marginBottom: 14 },
-  confirmCat: { backgroundColor: '#FFF9E6', borderRadius: 12, padding: 14, marginBottom: 16 },
-  confirmCatName: { fontSize: 15, fontWeight: 'bold', color: '#B45309' },
-  confirmCatSub: { fontSize: 13, color: '#666', marginTop: 2 },
-  sectionLabel: { fontSize: 13, fontWeight: 'bold', color: '#555', marginBottom: 10 },
-  entryFormRow: { backgroundColor: '#F4F6F8', borderRadius: 12, padding: 12, marginBottom: 8 },
-  entryFormInputs: { flexDirection: 'row', marginBottom: 6 },
-  entryInput: { backgroundColor: '#FFF', padding: 10, borderRadius: 8, fontSize: 13, color: '#333' },
-  notesEntryInput: { backgroundColor: '#FFF', padding: 10, borderRadius: 8, fontSize: 13, color: '#333', marginBottom: 6 },
-  removeEntryBtn: { alignSelf: 'flex-end' },
-  removeEntryText: { color: '#C62828', fontSize: 12, fontWeight: 'bold' },
-  addEntryBtn: { backgroundColor: '#E8F5E9', borderRadius: 10, padding: 12, alignItems: 'center', marginBottom: 8 },
-  addEntryText: { color: '#2E7D32', fontWeight: 'bold', fontSize: 14 },
-  modalActions: { flexDirection: 'row', gap: 10, marginTop: 8 },
-  mCancelBtn: { flex: 1, padding: 14, backgroundColor: '#F4F6F8', borderRadius: 12, alignItems: 'center' },
-  mCancelText: { color: '#666', fontWeight: 'bold' },
-  mSaveBtn: { flex: 1, padding: 14, backgroundColor: '#5EBFA4', borderRadius: 12, alignItems: 'center' },
-  mSaveText: { color: '#FFF', fontWeight: 'bold' },
+  emptyTitle: { fontSize: 16, fontWeight: 'bold', color: '#333' },
+  emptySub: { fontSize: 13, color: '#888', textAlign: 'center', marginTop: 6 },
+  card: { backgroundColor: '#FFF', borderRadius: 16, padding: 16, marginBottom: 16, elevation: 3, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 6 },
+  cardTop: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 14 },
+  iconBox: { width: 46, height: 46, borderRadius: 12, backgroundColor: '#FFF3E0', justifyContent: 'center', alignItems: 'center' },
+  cardTitle: { fontSize: 16, fontWeight: 'bold', color: '#222' },
+  cardSub: { fontSize: 12, color: '#888', marginTop: 2 },
+  badge: { paddingHorizontal: 9, paddingVertical: 4, borderRadius: 8 },
+  badgeActive: { backgroundColor: '#E8F5E9' },
+  badgeInactive: { backgroundColor: '#F5F5F5' },
+  badgeText: { fontSize: 10, fontWeight: 'bold', color: '#555' },
+  section: { borderTopWidth: 1, borderTopColor: '#F0F0F0', paddingTop: 12, marginTop: 10 },
+  sectionTitle: { fontSize: 13, fontWeight: 'bold', color: '#444', marginBottom: 8 },
+  mealsRow: { flexDirection: 'row', gap: 8 },
+  mealBox: { flex: 1, backgroundColor: '#F9FAFB', borderRadius: 10, padding: 10, alignItems: 'center' },
+  mealIcon: { fontSize: 20, marginBottom: 4 },
+  mealTime: { fontSize: 10, color: '#888', fontWeight: 'bold', marginBottom: 2 },
+  mealPortion: { fontSize: 12, color: '#333', textAlign: 'center', fontWeight: '600' },
+  detailRow: { fontSize: 13, color: '#666', marginBottom: 4 },
+  detailVal: { color: '#333', fontWeight: '600' },
+  noteText: { fontSize: 13, color: '#666', lineHeight: 20, fontStyle: 'italic' },
+  viewDocBtn: { marginTop: 12, backgroundColor: '#E8F5E9', borderRadius: 8, padding: 10, alignItems: 'center' },
+  viewDocText: { color: '#2E7D32', fontWeight: 'bold', fontSize: 13 },
+  dietCircle: { width: 24, height: 24, borderRadius: 12, backgroundColor: '#FF9800' },
 });
