@@ -13,7 +13,7 @@ import ForgotPasswordScreen from '../screens/auth/ForgotPasswordScreen';
 import AdminDashboardScreen from '../screens/admin/AdminDashboardScreen';
 import AdminVetManagementScreen from '../screens/admin/AdminVetManagementScreen';
 import AdminAppointmentApprovalScreen from '../screens/admin/AdminAppointmentApprovalScreen';
-import AdminVaccineManagementScreen from '../screens/admin/AdminVaccineManagementScreen';
+import AdminVaccineCatalogScreen from '../screens/admin/AdminVaccineCatalogScreen';
 import AdminGroomingManagementScreen from '../screens/admin/AdminGroomingManagementScreen';
 import AdminBoardingManagementScreen from '../screens/admin/AdminBoardingManagementScreen';
 import AdminDietManagementScreen from '../screens/admin/AdminDietManagementScreen';
@@ -57,7 +57,7 @@ export default function AppNavigator() {
             <Stack.Screen name="AdminDashboard" component={AdminDashboardScreen} />
             <Stack.Screen name="AdminVetManagement" component={AdminVetManagementScreen} />
             <Stack.Screen name="AdminAppointmentApproval" component={AdminAppointmentApprovalScreen} />
-            <Stack.Screen name="AdminVaccineManagement" component={AdminVaccineManagementScreen} />
+            <Stack.Screen name="AdminVaccineCatalog" component={AdminVaccineCatalogScreen} />
             <Stack.Screen name="AdminGroomingManagement" component={AdminGroomingManagementScreen} />
             <Stack.Screen name="AdminBoardingManagement" component={AdminBoardingManagementScreen} />
             <Stack.Screen name="AdminDietManagement" component={AdminDietManagementScreen} />
