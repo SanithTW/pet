@@ -1,5 +1,9 @@
 const User = require('../models/User');
 
+const shouldSyncAdminFromEnv = () =>
+  process.env.ADMIN_SYNC_ON_START === '1' ||
+  process.env.ADMIN_SYNC_ON_START === 'true';
+
 const seedAdminUser = async () => {
   try {
     const adminEmail = process.env.ADMIN_EMAIL?.trim();
@@ -12,10 +16,21 @@ const seedAdminUser = async () => {
       return;
     }
 
-    const existingAdmin = await User.findOne({ email: adminEmail });
+    const existing = await User.findOne({
+      email: new RegExp(`^${adminEmail.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i'),
+    });
 
-    if (existingAdmin) {
-      console.log('Admin user already exists:', adminEmail);
+    if (existing) {
+      if (shouldSyncAdminFromEnv()) {
+        existing.role = 'admin';
+        existing.name = existing.name || 'System Admin';
+        existing.password = adminPassword;
+        existing.authProvider = existing.authProvider || 'local';
+        await existing.save();
+        console.log('Admin user synchronized from .env (ADMIN_SYNC_ON_START):', adminEmail);
+      } else {
+        console.log('Admin user already exists:', adminEmail);
+      }
       return;
     }
 
@@ -23,7 +38,7 @@ const seedAdminUser = async () => {
       name: 'System Admin',
       email: adminEmail,
       password: adminPassword,
-      role: 'admin'
+      role: 'admin',
     });
 
     await adminUser.save();

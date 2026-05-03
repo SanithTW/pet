@@ -61,6 +61,7 @@ For physical devices testing the app, the API must be reachable on your LAN or v
    | `NODE_ENV` | No | Use `production` to hide stack traces and enforce OTP email |
    | `ADMIN_EMAIL` | For first admin | With `ADMIN_PASSWORD`, seeds one admin account on startup if missing |
    | `ADMIN_PASSWORD` | For first admin | Same as above |
+   | `ADMIN_SYNC_ON_START` | No | Set to **`1`** once to create/update the `ADMIN_EMAIL` user’s password and `admin` role on startup; set back to **`0`** after syncing so passwords are not reset every restart |
    | `EMAIL_USER` | Production OTP | Gmail address for OTP mail |
    | `EMAIL_PASS` | Production OTP | Gmail app password or compatible SMTP secret |
    | `ALLOW_INSECURE_GOOGLE_AUTH` | No | Must be **`true`** to allow legacy `POST /auth/google` (unverified payloads). Disabled by default |

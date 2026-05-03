@@ -4,6 +4,14 @@ const nodemailer = require('nodemailer');
 const User = require('../models/User');
 const OTP = require('../models/OTP');
 
+const escapeRegex = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+const findUserByEmail = (email) => {
+  const trimmed = (email || '').trim();
+  if (!trimmed) return null;
+  return User.findOne({ email: new RegExp(`^${escapeRegex(trimmed)}$`, 'i') });
+};
+
 // Generate JWT
 const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, {
@@ -61,8 +69,9 @@ const sendOTP = async (req, res) => {
       throw new Error('Please provide an email address');
     }
 
-    const userExists = await User.findOne({ email });
+    const userExists = await findUserByEmail(email);
     const purpose = userExists ? 'login' : 'registration';
+    const emailNorm = email.trim().toLowerCase();
 
     const mailConfigured = Boolean(process.env.EMAIL_USER?.trim() && process.env.EMAIL_PASS?.trim());
     if (process.env.NODE_ENV === 'production' && !mailConfigured) {
@@ -75,16 +84,16 @@ const sendOTP = async (req, res) => {
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
     // Delete any existing OTP for this email
-    await OTP.deleteMany({ email });
+    await OTP.deleteMany({ email: emailNorm });
 
-    // Save new OTP
+    // Save new OTP (normalized email for reliable lookup)
     await OTP.create({
-      email,
+      email: emailNorm,
       otp
     });
 
     // Send the email
-    await sendEmailOTP(email, otp, purpose);
+    await sendEmailOTP(email.trim(), otp, purpose);
 
     const responsePayload = { message: `OTP sent successfully for ${purpose}` };
     if (!mailConfigured && process.env.NODE_ENV !== 'production') {
@@ -109,24 +118,26 @@ const loginWithOTP = async (req, res) => {
       throw new Error('Please provide email and OTP');
     }
 
-    const user = await User.findOne({ email });
+    const user = await findUserByEmail(email);
     if (!user) {
       res.status(400);
       throw new Error('No account found with this email');
     }
 
-    const validOtpRecord = await OTP.findOne({ email, otp });
+    const emailNorm = email.trim().toLowerCase();
+    const validOtpRecord = await OTP.findOne({ email: emailNorm, otp });
     if (!validOtpRecord) {
       res.status(400);
       throw new Error('Invalid or expired OTP');
     }
 
-    await OTP.deleteMany({ email });
+    await OTP.deleteMany({ email: emailNorm });
 
     res.status(200).json({
       _id: user.id,
       name: user.name,
       email: user.email,
+      role: user.role,
       token: generateToken(user._id),
     });
   } catch (error) {
@@ -147,15 +158,17 @@ const registerUser = async (req, res) => {
     }
 
     // Check if user exists
-    const userExists = await User.findOne({ email });
+    const userExists = await findUserByEmail(email);
 
     if (userExists) {
       res.status(400);
       throw new Error('User already exists');
     }
 
+    const emailNorm = email.trim().toLowerCase();
+
     // Verify OTP
-    const validOtpRecord = await OTP.findOne({ email, otp });
+    const validOtpRecord = await OTP.findOne({ email: emailNorm, otp });
     if (!validOtpRecord) {
       res.status(400);
       throw new Error('Invalid or expired OTP');
@@ -164,13 +177,13 @@ const registerUser = async (req, res) => {
     // Create user
     const user = await User.create({
       name,
-      email,
+      email: emailNorm,
       password,
       phone
     });
 
     // After successful registration, delete the OTP record
-    await OTP.deleteMany({ email });
+    await OTP.deleteMany({ email: emailNorm });
 
     if (user) {
       res.status(201).json({
@@ -196,8 +209,7 @@ const loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // Check for user email
-    const user = await User.findOne({ email });
+    const user = await findUserByEmail(email);
 
     if (!user) {
       res.status(400);
@@ -210,7 +222,12 @@ const loginUser = async (req, res) => {
       throw new Error('Please login with Google');
     }
 
-    if (user && (await bcrypt.compare(password, user.password))) {
+    if (!user.password) {
+      res.status(400);
+      throw new Error('This account has no password set. Use Register or OTP login.');
+    }
+
+    if (await bcrypt.compare(password, user.password)) {
       res.json({
         _id: user.id,
         name: user.name,
@@ -247,12 +264,12 @@ const googleLogin = async (req, res) => {
 
     const displayName = (name && String(name).trim()) || String(email).split('@')[0] || 'User';
 
-    let user = await User.findOne({ email });
+    let user = await findUserByEmail(email);
 
     if (!user) {
       user = await User.create({
         name: displayName,
-        email,
+        email: email.trim().toLowerCase(),
         authProvider: 'google'
       });
     }
