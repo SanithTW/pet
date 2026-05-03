@@ -21,6 +21,8 @@ export default function AdminVaccineManagementScreen({ navigation }) {
   const [recordStatus, setRecordStatus] = useState('Scheduled');
   const [notes, setNotes] = useState('');
   const [documentUri, setDocumentUri] = useState(null);
+  /** Preserved ISO date when editing Completed records (avoid overwriting on each save). */
+  const [editDateAdministeredIso, setEditDateAdministeredIso] = useState(null);
 
   const authHeader = { headers: { Authorization: `Bearer ${userToken}` } };
   const baseFileUrl = getBackendOrigin();
@@ -57,6 +59,7 @@ export default function AdminVaccineManagementScreen({ navigation }) {
     setRecordStatus('Scheduled');
     setNotes('');
     setDocumentUri(null);
+    setEditDateAdministeredIso(null);
     setShowRecordModal(true);
   };
 
@@ -67,6 +70,9 @@ export default function AdminVaccineManagementScreen({ navigation }) {
     setRecordStatus(record.status);
     setNotes(record.notes || '');
     setDocumentUri(record.documentUrl ? (record.documentUrl.startsWith('data:') ? record.documentUrl : `${baseFileUrl}${record.documentUrl}`) : null);
+    setEditDateAdministeredIso(
+      record.dateAdministered ? new Date(record.dateAdministered).toISOString() : null
+    );
     setShowRecordModal(true);
   };
 
@@ -79,27 +85,72 @@ export default function AdminVaccineManagementScreen({ navigation }) {
     if (!result.canceled) setDocumentUri(result.assets[0].uri);
   };
 
-  const handleSaveRecord = async () => {
-    if (!vaccineName.trim()) return Alert.alert('Error', 'Vaccine name is required');
-    
-    const formData = new FormData();
+  const appendVaccineFormFields = (formData) => {
     formData.append('vaccineName', vaccineName);
     formData.append('status', recordStatus);
     formData.append('notes', notes);
     if (recordStatus === 'Completed') {
-      formData.append('dateAdministered', new Date().toISOString());
+      const iso =
+        editingRecordId && editDateAdministeredIso
+          ? editDateAdministeredIso
+          : new Date().toISOString();
+      formData.append('dateAdministered', iso);
     }
-    
-    if (documentUri && !documentUri.startsWith('http')) {
-      const ext = documentUri.split('.').pop();
-      formData.append('document', { uri: documentUri, name: `vac.${ext}`, type: `image/${ext}` });
-    }
+  };
+
+  const handleSaveRecord = async () => {
+    if (!vaccineName.trim()) return Alert.alert('Error', 'Vaccine name is required');
+
+    const hasNewLocalFile = !!(documentUri && !documentUri.startsWith('http'));
 
     try {
       if (editingRecordId) {
-        await api.put(`/vaccines/records/admin/${editingRecordId}`, formData, authHeader);
+        if (!hasNewLocalFile) {
+          const payload = {
+            vaccineName: vaccineName.trim(),
+            status: recordStatus,
+            notes,
+          };
+          if (recordStatus === 'Completed') {
+            payload.dateAdministered =
+              editDateAdministeredIso || new Date().toISOString();
+          }
+          await api.put(
+            `/vaccines/records/admin/${editingRecordId}`,
+            payload,
+            authHeader
+          );
+        } else {
+          const formData = new FormData();
+          appendVaccineFormFields(formData);
+          const ext = documentUri.split('.').pop();
+          formData.append('document', {
+            uri: documentUri,
+            name: `vac.${ext}`,
+            type: `image/${ext}`,
+          });
+          await api.put(
+            `/vaccines/records/admin/${editingRecordId}`,
+            formData,
+            authHeader
+          );
+        }
       } else {
-        await api.post(`/appointments/${selectedAppId}/vaccine`, formData, authHeader);
+        const formData = new FormData();
+        appendVaccineFormFields(formData);
+        if (documentUri && !documentUri.startsWith('http')) {
+          const ext = documentUri.split('.').pop();
+          formData.append('document', {
+            uri: documentUri,
+            name: `vac.${ext}`,
+            type: `image/${ext}`,
+          });
+        }
+        await api.post(
+          `/appointments/${selectedAppId}/vaccine`,
+          formData,
+          authHeader
+        );
       }
       setShowRecordModal(false);
       fetchVaccineRecords();
@@ -134,6 +185,11 @@ export default function AdminVaccineManagementScreen({ navigation }) {
     setRecordStatus('Completed');
     setNotes(record.notes || '');
     setDocumentUri(null);
+    setEditDateAdministeredIso(
+      record.dateAdministered
+        ? new Date(record.dateAdministered).toISOString()
+        : new Date().toISOString()
+    );
     setShowRecordModal(true);
     
     // Automatically trigger image picker after a short delay to let modal animate

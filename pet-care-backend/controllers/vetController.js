@@ -1,5 +1,6 @@
 const User = require('../models/User');
 const VetSchedule = require('../models/VetSchedule');
+const Appointment = require('../models/Appointment');
 
 // @desc    Add a vet user
 // @route   POST /api/vets
@@ -41,7 +42,8 @@ const addVet = async (req, res) => {
       _id: vet._id,
       name: vet.name,
       email: vet.email,
-      role: vet.role
+      phone: vet.phone,
+      role: vet.role,
     });
   } catch (error) {
     res.status(400).json({ message: error.message });
@@ -55,6 +57,82 @@ const getVets = async (req, res) => {
   try {
     const vets = await User.find({ role: 'vet' }).select('-password');
     res.status(200).json(vets);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+};
+
+// @desc    Update a vet profile
+// @route   PUT /api/vets/:id
+// @access  Private/Admin
+const updateVet = async (req, res) => {
+  try {
+    const vet = await User.findById(req.params.id);
+    if (!vet || vet.role !== 'vet') {
+      res.status(404);
+      throw new Error('Vet not found');
+    }
+
+    const { name, email, phone } = req.body;
+    if (name !== undefined && name !== null) vet.name = String(name).trim();
+    if (email !== undefined && email !== null) {
+      const nextEmail = String(email).trim();
+      if (!nextEmail.includes('@')) {
+        res.status(400);
+        throw new Error('Invalid email format (must contain @)');
+      }
+      if (nextEmail !== vet.email) {
+        const taken = await User.findOne({ email: nextEmail });
+        if (taken) {
+          res.status(400);
+          throw new Error('Email already in use');
+        }
+      }
+      vet.email = nextEmail;
+    }
+    if (phone !== undefined && phone !== null) {
+      const p = String(phone).trim();
+      if (!/^\d{10}$/.test(p)) {
+        res.status(400);
+        throw new Error('Phone number must be exactly 10 digits');
+      }
+      vet.phone = p;
+    }
+
+    if (!vet.name || !vet.email || !vet.phone) {
+      res.status(400);
+      throw new Error('Name, email, and phone are required');
+    }
+
+    await vet.save();
+    res.status(200).json({
+      _id: vet._id,
+      name: vet.name,
+      email: vet.email,
+      phone: vet.phone,
+      role: vet.role,
+    });
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+};
+
+// @desc    Remove a vet (clears links on appointments; removes schedules)
+// @route   DELETE /api/vets/:id
+// @access  Private/Admin
+const deleteVet = async (req, res) => {
+  try {
+    const vet = await User.findById(req.params.id);
+    if (!vet || vet.role !== 'vet') {
+      res.status(404);
+      throw new Error('Vet not found');
+    }
+
+    await VetSchedule.deleteMany({ vet: vet._id });
+    await Appointment.updateMany({ vet: vet._id }, { $unset: { vet: 1, schedule: 1 } });
+    await User.deleteOne({ _id: vet._id, role: 'vet' });
+
+    res.status(200).json({ message: 'Vet removed' });
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
@@ -179,6 +257,8 @@ const deleteVetSchedule = async (req, res) => {
 module.exports = {
   addVet,
   getVets,
+  updateVet,
+  deleteVet,
   setVetSchedule,
   getVetSchedules,
   getAllSchedules,
