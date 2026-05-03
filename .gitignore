@@ -1,15 +1,55 @@
-# Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
-
-# dependencies
+# --- Dependencies ---
 node_modules/
 
-# Expo
-.expo/
-dist/
-web-build/
-expo-env.d.ts
+# --- Environment & secrets (never commit) ---
+.env
+.env.*
+!.env.example
 
-# Native
+# --- Logs & diagnostics ---
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# --- Runtime / build output ---
+dist/
+build/
+out/
+coverage/
+.nyc_output/
+*.tsbuildinfo
+
+# --- pet-care-backend ---
+# User uploads created at runtime (see server.js)
+pet-care-backend/uploads/
+
+# --- pet-care-mobile (Expo / React Native) ---
+pet-care-mobile/.expo/
+pet-care-mobile/dist/
+pet-care-mobile/web-build/
+pet-care-mobile/expo-env.d.ts
+pet-care-mobile/.metro-health-check*
+
+# Native projects (after `expo prebuild` / eject — remove these lines if you commit native code)
+pet-care-mobile/ios/
+pet-care-mobile/android/
+
+# --- OS ---
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+*.pem
+
+# --- IDEs ---
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# --- Tooling / misc ---
 .kotlin/
 *.orig.*
 *.jks
@@ -17,27 +57,3 @@ expo-env.d.ts
 *.p12
 *.key
 *.mobileprovision
-
-# Metro
-.metro-health-check*
-
-# debug
-npm-debug.*
-yarn-debug.*
-yarn-error.*
-
-# macOS
-.DS_Store
-*.pem
-
-# local env files
-.env*.local
-.env
-
-# typescript
-*.tsbuildinfo
-
-# generated native folders
-/ios
-/android
-.DS_Store
