@@ -51,7 +51,7 @@ export default function AdminDashboardScreen({ navigation }) {
     } else if (item === 'Appointments') {
       navigation.navigate('AdminAppointmentApproval');
     } else if (item === 'Vaccine') {
-      navigation.navigate('AdminVaccineManagement');
+      navigation.navigate('AdminVaccineCatalog');
     } else if (item === 'Grooming') {
       navigation.navigate('AdminGroomingManagement');
     } else if (item === 'Boarding') {

@@ -1,14 +1,19 @@
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
-const path = require('path');
 const { protect, admin, vetOrAdmin } = require('../middleware/authMiddleware');
 const {
   addVaccineRecord,
   getMyVaccineRecords,
   deleteVaccineRecord,
   getAllVaccineRecords,
-  updateVaccineRecord
+  updateVaccineRecord,
+  getCatalogForOwners,
+  getCatalogAdmin,
+  createCatalogVaccine,
+  updateCatalogVaccine,
+  deleteCatalogVaccine,
+  confirmOwnerVaccines,
 } = require('../controllers/vaccineController');
 
 const storage = multer.memoryStorage();
@@ -23,8 +28,16 @@ function vaccineAdminMaybeUpload(req, res, next) {
   return next();
 }
 
+// Catalog (offerings)
+router.get('/catalog', protect, getCatalogForOwners);
+router.get('/catalog/admin', protect, admin, getCatalogAdmin);
+router.post('/catalog/admin', protect, admin, createCatalogVaccine);
+router.put('/catalog/admin/:id', protect, admin, updateCatalogVaccine);
+router.delete('/catalog/admin/:id', protect, admin, deleteCatalogVaccine);
+
 // Records (User)
 router.get('/records', protect, getMyVaccineRecords);
+router.post('/records/confirm', protect, confirmOwnerVaccines);
 router.post('/records', protect, addVaccineRecord);
 router.delete('/records/:id', protect, deleteVaccineRecord);
 
