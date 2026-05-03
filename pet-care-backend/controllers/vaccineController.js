@@ -110,19 +110,35 @@ const updateVaccineRecord = async (req, res) => {
     }
 
     const { status, dateAdministered, nextDueDate, notes, vaccineName } = req.body;
-    
-    if (status) record.status = status;
-    if (dateAdministered) record.dateAdministered = dateAdministered;
-    if (nextDueDate) record.nextDueDate = nextDueDate;
+
+    if (vaccineName !== undefined && vaccineName !== null) {
+      record.vaccineName = String(vaccineName).trim();
+    }
     if (notes !== undefined) record.notes = notes;
-    if (vaccineName) record.vaccineName = vaccineName;
+
+    if (status !== undefined && status !== null && status !== '') {
+      record.status = status;
+    }
+
+    if (dateAdministered !== undefined && dateAdministered !== null && String(dateAdministered).trim() !== '') {
+      record.dateAdministered = dateAdministered;
+    } else if (record.status === 'Scheduled') {
+      record.dateAdministered = undefined;
+    }
+
+    if (nextDueDate !== undefined) {
+      record.nextDueDate = nextDueDate || undefined;
+    }
 
     if (req.file) {
       record.documentUrl = await persistMedia(req.file, 'vaccine-documents');
     }
 
     await record.save();
-    res.status(200).json(record);
+    const payload = await PetVaccineRecord.findById(record._id)
+      .populate('pet', 'name species')
+      .populate('owner', 'name email');
+    res.status(200).json(payload);
   } catch (error) {
     res.status(400).json({ message: error.message });
   }

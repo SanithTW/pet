@@ -3,6 +3,8 @@ const router = express.Router();
 const {
   addVet,
   getVets,
+  updateVet,
+  deleteVet,
   setVetSchedule,
   getVetSchedules,
   getAllSchedules,
@@ -24,5 +26,9 @@ router.route('/:id/schedule')
 router.route('/:id/schedule/:scheduleId')
   .put(protect, admin, updateVetSchedule)
   .delete(protect, admin, deleteVetSchedule);
+
+router.route('/:id')
+  .put(protect, admin, updateVet)
+  .delete(protect, admin, deleteVet);
 
 module.exports = router;

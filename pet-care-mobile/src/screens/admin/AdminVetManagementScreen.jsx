@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useContext } from 'react';
-import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity, TextInput, Alert, Modal, FlatList, Platform } from 'react-native';
+import React, { useState, useEffect, useContext, useCallback } from 'react';
+import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity, TextInput, Alert, Modal, Platform } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { AuthContext } from '../../context/AuthContext';
 import api from '../../services/api';
@@ -8,6 +8,7 @@ export default function AdminVetManagementScreen({ navigation }) {
   const { userToken } = useContext(AuthContext);
   const [vets, setVets] = useState([]);
   const [showAddVet, setShowAddVet] = useState(false);
+  const [editingVetId, setEditingVetId] = useState(null);
   const [showScheduleVet, setShowScheduleVet] = useState(false);
   const [selectedVet, setSelectedVet] = useState(null);
   const [vetSchedules, setVetSchedules] = useState([]);
@@ -60,23 +61,53 @@ export default function AdminVetManagementScreen({ navigation }) {
     }
   };
 
-  useEffect(() => {
-    fetchVets();
-  }, []);
-
-  const fetchVets = async () => {
+  const fetchVets = useCallback(async () => {
+    if (!userToken) return;
     try {
       const { data } = await api.get('/vets', {
-        headers: { Authorization: `Bearer ${userToken}` }
+        headers: { Authorization: `Bearer ${userToken}` },
+        params: { _refresh: Date.now() },
       });
-      setVets(data);
+      setVets(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Error fetching vets:', error);
       Alert.alert('Error', 'Could not load vets.');
     }
+  }, [userToken]);
+
+  useEffect(() => {
+    fetchVets();
+  }, [fetchVets]);
+
+  /** Same-ID compare (_id sometimes string vs object shape from JSON). */
+  const sameId = (a, b) => String(a) === String(b);
+
+  const resetVetForm = () => {
+    setName('');
+    setEmail('');
+    setPhone('');
+    setEditingVetId(null);
   };
 
-  const handleAddVet = async () => {
+  const openNewVetModal = () => {
+    resetVetForm();
+    setShowAddVet(true);
+  };
+
+  const openEditVetModal = (vet) => {
+    setEditingVetId(vet._id);
+    setName(vet.name || '');
+    setEmail(vet.email || '');
+    setPhone(vet.phone || '');
+    setShowAddVet(true);
+  };
+
+  const closeVetModal = () => {
+    setShowAddVet(false);
+    resetVetForm();
+  };
+
+  const handleSaveVet = async () => {
     if (!name.trim() || !email.trim() || !phone.trim()) {
       Alert.alert('Validation Error', 'Please fill in all required fields.');
       return;
@@ -93,20 +124,60 @@ export default function AdminVetManagementScreen({ navigation }) {
       return;
     }
 
+    const headers = { Authorization: `Bearer ${userToken}` };
+    const idBeingEdited = editingVetId;
     try {
-      await api.post('/vets', {
-        name, email, phone, role: 'vet'
-      }, {
-        headers: { Authorization: `Bearer ${userToken}` }
-      });
-      Alert.alert('Success', 'Vet added successfully');
-      setShowAddVet(false);
-      setName(''); setEmail(''); setPhone('');
-      fetchVets();
+      if (idBeingEdited) {
+        const { data: saved } = await api.put(
+          `/vets/${idBeingEdited}`,
+          { name, email, phone },
+          { headers }
+        );
+        setVets((prev) =>
+          prev.map((v) => (sameId(v._id, idBeingEdited) ? { ...v, ...saved } : v))
+        );
+        Alert.alert('Success', 'Vet updated successfully');
+      } else {
+        const { data: saved } = await api.post(
+          '/vets',
+          { name, email, phone, role: 'vet' },
+          { headers }
+        );
+        setVets((prev) => [...prev, { ...saved, phone: saved.phone ?? phone }]);
+        Alert.alert('Success', 'Vet added successfully');
+      }
+      closeVetModal();
+      await fetchVets();
     } catch (error) {
       console.error(error);
-      Alert.alert('Error', error.response?.data?.message || 'Could not add vet');
+      Alert.alert('Error', error.response?.data?.message || 'Could not save vet');
     }
+  };
+
+  const handleDeleteVet = (vet) => {
+    Alert.alert(
+      'Delete vet',
+      `Remove ${vet.name}? Their schedules will be deleted and appointments will no longer be linked to this vet.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await api.delete(`/vets/${vet._id}`, {
+                headers: { Authorization: `Bearer ${userToken}` },
+              });
+              setVets((prev) => prev.filter((v) => !sameId(v._id, vet._id)));
+              await fetchVets();
+              Alert.alert('Success', 'Vet removed');
+            } catch (error) {
+              Alert.alert('Error', error.response?.data?.message || 'Could not delete vet');
+            }
+          },
+        },
+      ]
+    );
   };
 
   const fetchVetSchedules = async (vid) => {
@@ -165,7 +236,7 @@ export default function AdminVetManagementScreen({ navigation }) {
               <Text style={styles.backArrow}>{'<'}</Text>
             </TouchableOpacity>
             <Text style={styles.greeting}>Vet Management</Text>
-            <TouchableOpacity onPress={() => setShowAddVet(true)}>
+            <TouchableOpacity onPress={openNewVetModal}>
               <Text style={styles.addText}>+ Add</Text>
             </TouchableOpacity>
           </View>
@@ -176,23 +247,33 @@ export default function AdminVetManagementScreen({ navigation }) {
         <Text style={styles.sectionTitle}>Current Vets</Text>
         {vets.map(vet => (
           <View key={vet._id} style={styles.card}>
-            <View>
-              <Text style={styles.cardTitle}>{vet.name}</Text>
-              <Text style={styles.cardSub}>{vet.email}</Text>
-              <Text style={styles.cardSub}>{vet.phone}</Text>
+            <View style={styles.cardMain}>
+              <View style={styles.cardInfo}>
+                <Text style={styles.cardTitle}>{vet.name}</Text>
+                <Text style={styles.cardSub}>{vet.email}</Text>
+                <Text style={styles.cardSub}>{vet.phone}</Text>
+              </View>
+              <TouchableOpacity
+                style={styles.actionBtn}
+                onPress={() => {
+                  setSelectedVet(vet._id);
+                  setEditingScheduleId(null);
+                  setDate(''); setStartTime(''); setEndTime(''); setMaxAppointments('');
+                  fetchVetSchedules(vet._id);
+                  setShowScheduleVet(true);
+                }}
+              >
+                <Text style={styles.actionBtnText}>Set Schedule</Text>
+              </TouchableOpacity>
             </View>
-            <TouchableOpacity 
-              style={styles.actionBtn}
-              onPress={() => {
-                setSelectedVet(vet._id);
-                setEditingScheduleId(null);
-                setDate(''); setStartTime(''); setEndTime(''); setMaxAppointments('');
-                fetchVetSchedules(vet._id);
-                setShowScheduleVet(true);
-              }}
-            >
-              <Text style={styles.actionBtnText}>Set Schedule</Text>
-            </TouchableOpacity>
+            <View style={styles.vetRowActions}>
+              <TouchableOpacity onPress={() => openEditVetModal(vet)}>
+                <Text style={styles.editLink}>Edit</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => handleDeleteVet(vet)}>
+                <Text style={styles.deleteLink}>Delete</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         ))}
         {vets.length === 0 && <Text style={styles.emptyText}>No vets found.</Text>}
@@ -202,18 +283,18 @@ export default function AdminVetManagementScreen({ navigation }) {
       <Modal visible={showAddVet} animationType="slide" transparent={true}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Add New Vet</Text>
+            <Text style={styles.modalTitle}>{editingVetId ? 'Edit Vet' : 'Add New Vet'}</Text>
             <TextInput style={styles.input} placeholder="Name" value={name} onChangeText={setName} />
             <TextInput style={styles.input} placeholder="Email" value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" />
 
             <TextInput style={styles.input} placeholder="Phone" value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
             
             <View style={styles.modalActions}>
-              <TouchableOpacity style={styles.cancelBtn} onPress={() => setShowAddVet(false)}>
+              <TouchableOpacity style={styles.cancelBtn} onPress={closeVetModal}>
                 <Text style={styles.cancelBtnText}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.submitBtn} onPress={handleAddVet}>
-                <Text style={styles.submitBtnText}>Add Vet</Text>
+              <TouchableOpacity style={styles.submitBtn} onPress={handleSaveVet}>
+                <Text style={styles.submitBtnText}>{editingVetId ? 'Save' : 'Add Vet'}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -325,10 +406,19 @@ const styles = StyleSheet.create({
   sectionTitle: { fontSize: 18, fontWeight: 'bold', color: '#333', marginBottom: 16 },
   card: {
     backgroundColor: '#FFF', padding: 20, borderRadius: 16, marginBottom: 16,
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05, shadowRadius: 6, elevation: 3,
   },
+  cardMain: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start',
+  },
+  cardInfo: { flex: 1, paddingRight: 12 },
+  vetRowActions: {
+    flexDirection: 'row', justifyContent: 'flex-end', gap: 20, marginTop: 14,
+    paddingTop: 12, borderTopWidth: 1, borderTopColor: '#EEE',
+  },
+  editLink: { color: '#5EBFA4', fontWeight: 'bold', fontSize: 14 },
+  deleteLink: { color: '#FF5252', fontWeight: 'bold', fontSize: 14 },
   cardTitle: { fontSize: 16, fontWeight: 'bold', color: '#333' },
   cardSub: { fontSize: 13, color: '#666', marginTop: 4 },
   actionBtn: { backgroundColor: '#E8F5E9', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8 },
